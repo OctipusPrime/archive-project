@@ -1,0 +1,3 @@
+The aim of the project is to create a script for archiving a project into Obsidian.
+
+A project directory will be provided as a command line argument. An archive version of the project will be created in the same directory.
