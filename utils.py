@@ -1,6 +1,6 @@
 import os
 import shutil
-from prompts import README_PROMPT  # Import the prompt
+from prompts import README_PROMPT, FILE_PROMPT 
 
 def collect_repository_structure(src_dir: str) -> str:
     """
@@ -46,7 +46,7 @@ def generate_readme(archive_dir_path: str, openai_client):
 
     # Determine the project directory name for the README file
     project_dir_name = os.path.basename(os.path.normpath(archive_dir_path))
-    readme_filename = f"README_{project_dir_name}.md"
+    readme_filename = f"generated_README_{project_dir_name}.md"
 
     # Write the README.md file
     readme_path = os.path.join(archive_dir_path, readme_filename)
@@ -54,7 +54,7 @@ def generate_readme(archive_dir_path: str, openai_client):
         readme_file.write(readme_content)
 
 
-def process_directory(src_dir: str, dst_dir: str, skip_dirs: set, skip_files: set) -> bool:
+def process_directory(src_dir: str, dst_dir: str, skip_dirs: set, no_file_description: bool, openai_client) -> bool:
     """
     Recursively checks 'src_dir' for .py files (directly or in its subdirectories).
     Returns True if at least one .py file is found in 'src_dir' or its descendants.
@@ -66,7 +66,6 @@ def process_directory(src_dir: str, dst_dir: str, skip_dirs: set, skip_files: se
     - Recursively processes subdirectories that contain .py files.
 
     skip_dirs: names of directories to ignore entirely
-    skip_files: names of individual files to skip
     """
     # List the contents of the source directory
     try:
@@ -82,15 +81,11 @@ def process_directory(src_dir: str, dst_dir: str, skip_dirs: set, skip_files: se
         if entry in skip_dirs or "env" in entry:
             continue
 
-        # Skip the archiver script or any other files in skip_files
-        if entry in skip_files:
-            continue
-
         src_path = os.path.join(src_dir, entry)
 
         if os.path.isdir(src_path):
             # Recursively check if the subdirectory contains .py files
-            if process_directory(src_path, os.path.join(dst_dir, entry), skip_dirs, skip_files):
+            if process_directory(src_path, os.path.join(dst_dir, entry), skip_dirs, no_file_description, openai_client):
                 found_python = True
         else:
             # If it's a .py file, we have a match
@@ -105,25 +100,39 @@ def process_directory(src_dir: str, dst_dir: str, skip_dirs: set, skip_files: se
         for entry in entries:
             if entry in skip_dirs or "env" in entry:
                 continue
-            if entry in skip_files:
-                continue
 
             src_path = os.path.join(src_dir, entry)
             dst_sub_path = os.path.join(dst_dir, entry)
 
             if os.path.isdir(src_path):
                 # We already know there's something in there, so process again to copy .py files
-                process_directory(src_path, dst_sub_path, skip_dirs, skip_files)
+                process_directory(src_path, dst_sub_path, skip_dirs, no_file_description, openai_client)
             else:
                 # Convert .py -> .md
                 if entry.endswith('.py'):
                     with open(src_path, 'r', encoding='utf-8') as f:
                         code_content = f.read()
 
+                    # Generate file description if not no_file_description
+                    file_description = ""
+                    if not no_file_description:
+                        file_messages = [
+                            {"role": "system", "content": FILE_PROMPT},
+                            {"role": "user", "content": code_content}
+                        ]
+                        file_response = openai_client.chat.completions.create(
+                            model="gpt-4o",
+                            messages=file_messages,
+                            temperature=0.3
+                        )
+                        file_description = file_response.choices[0].message.content
+
                     md_filename = os.path.splitext(entry)[0] + '.md'
                     md_path = os.path.join(dst_dir, md_filename)
 
                     with open(md_path, 'w', encoding='utf-8') as md_file:
+                        if file_description:
+                            md_file.write(f"## {entry}\n{file_description}\n\n")
                         md_file.write("```python\n")
                         md_file.write(code_content)
                         md_file.write("\n```")

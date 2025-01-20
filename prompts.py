@@ -1,5 +1,5 @@
 README_PROMPT = """
-You're a professional and experienced web developer and open source contributor. Create a first release README document for these files. The target audience is professional developers with five years of experience building python projects.
+You're a professional and experienced developer and open source contributor. Create a first release README document for these files. The target audience is professional developers with five years of experience building python projects.
 
 - Include a description
 - A list of interesting techniques the code uses in the files provided. 
@@ -10,4 +10,10 @@ You're a professional and experienced web developer and open source contributor.
 - I don't need a How to Use section
 
 Avoid using verbose, indirect, or jargon-heavy phrases. Opt for straightforward, concise, and conversational language that is accessible and engaging to a broad audience. Strive for simplicity, clarity, and directness in your phrasing. It should directly engage the audience. Use a matter-of-fact tone, with fewer adjectives and a more straightforward approach. Please remain neutral.
+"""
+
+FILE_PROMPT = """
+You are a professional developer. Create a description of a given python file. 
+The purpose is to make it easier to find a relevant file when writing future projects. 
+Focus on the purpose and execution, what technologies are used, what the functions do. 
 """
